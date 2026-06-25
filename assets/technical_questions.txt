@@ -1,0 +1,16 @@
+What is Python?
+What is flow control in Python?
+What is the difference between a list and tuple?
+Explain OOP concepts in Python?
+
+What is the difference between AI and ML?
+What are the types of machine learning?
+What is overfitting and underfitting?
+Explain cross validation?
+What is a confusion matrix?
+
+What is a neural network?
+What is backpropagation?
+Differentiate between ANN,CNN and RNN?
+What is transfer learning?
+What is MediaPipe?

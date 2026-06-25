@@ -8,7 +8,9 @@ from modules.head_pose import get_head_pose
 from modules.posture import get_posture
 from modules.confidence import ( calculate_confidence, calculate_communication_score )
 from modules.report import generate_report
-from modules.speech_analysis import ( record_audio, speech_to_text, calculate_wpm, count_fillers)
+from modules.speech_analysis import ( start_recording, stop_recording, speech_to_text, calculate_wpm, count_fillers)
+from modules.feedback import generate_feedback
+from modules.interview_type import select_interview_type
 
 # MediaPipe Setup
 mp_face_mesh = mp.solutions.face_mesh
@@ -31,28 +33,56 @@ pose = mp_pose.Pose(
 # Webcam
 cap = cv2.VideoCapture(0)
 
+audio_stream = start_recording()
+
+print("Interview recording started...")
+
 # Start interview timer
 start_time = time.time()
 
-import os
+choice = select_interview_type()
 
-questions_path = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "assets",
-    "questions.txt"
-)
+if choice == "1":
 
-print("Questions file:", questions_path)
+    interview_type = "HR Interview"
 
-questions = load_questions(questions_path)
+    questions = load_questions(
+        "assets/hr_questions.txt"
+    )
 
-print("Questions:", questions)
-print("Length:", len(questions))
+elif choice == "2":
+
+    interview_type = "Technical Interview"
+
+    questions = load_questions(
+        "assets/technical_questions.txt"
+    )
+
+else:
+
+    interview_type = "HR + Technical Interview"
+
+    hr_questions = load_questions(
+        "assets/hr_questions.txt"
+    )
+
+    technical_questions = load_questions(
+        "assets/technical_questions.txt"
+    )
+
+    questions = (
+        hr_questions +
+        technical_questions
+    )
+
 
 current_question_index = 0
-question_interval = 30  # seconds
 
 asked_questions = []
+
+question_start_time = time.time()
+
+MAX_QUESTION_TIME = 120
 
 # Default values
 eye_score = 0
@@ -122,7 +152,7 @@ while True:
         f"Eye Contact: {eye_score}%",
         (20, 40),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
+        0.5,
         (0, 255, 0),
         2
     )
@@ -132,7 +162,7 @@ while True:
         f"Head Stability: {head_score}%",
         (20, 80),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
+        0.5,
         (255, 255, 0),
         2
     )
@@ -142,7 +172,7 @@ while True:
         f"Posture Score: {posture_score}%",
         (20, 120),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
+        0.5,
         (255, 0, 255),
         2
     )
@@ -152,7 +182,7 @@ while True:
         f"Confidence: {confidence_score}%",
         (20, 160),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.8,
+        0.5,
         (0, 0, 255),
         2
     )
@@ -166,7 +196,7 @@ while True:
         f"Eye: {eye_status}",
         (20, 220),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
+        0.5,
         (255, 255, 255),
         2
     )
@@ -176,7 +206,7 @@ while True:
         f"Head: {head_status}",
         (20, 250),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
+        0.5,
         (255, 255, 255),
         2
     )
@@ -186,40 +216,27 @@ while True:
         f"Posture: {posture_status}",
         (20, 280),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
+        0.5,
         (255, 255, 255),
         2
     )
 
     elapsed_time = int(time.time() - start_time)
 
-    time_remaining = question_interval - (
-        elapsed_time % question_interval
-    )
-
-    current_question_index = min(
-        elapsed_time // question_interval,
-        len(questions) - 1
-    )
-
     current_question = questions[current_question_index]
 
-    if current_question not in asked_questions:
-        asked_questions.append(current_question )
-
     question_number = current_question_index + 1
-
-    time_remaining = question_interval - (
-        elapsed_time % question_interval
-    )
     
+    question_elapsed = int(
+        time.time() - question_start_time
+    )   
 
     cv2.putText(
         frame,
         f"Duration: {elapsed_time}s",
         (20, 320),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
+        0.5,
         (0, 255, 255),
         2
     )
@@ -227,19 +244,19 @@ while True:
     cv2.putText(
         frame,
         f"Question {question_number}/{len(questions)}",
-        (20, 350),
+        (20, 345),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
+        0.5,
         (0, 255, 255),
         2
     )
 
     cv2.putText(
         frame,
-        f"Next Question In: {time_remaining}s",
-        (20, 380),
+        f"Question Time : {question_elapsed}s",
+        (20, 370),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
+        0.5,
         (0, 255, 0),
         2
     )
@@ -247,9 +264,9 @@ while True:
     cv2.putText(
         frame,
         "Question:",
-        (20, 410),
+        (20, 395),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
+        0.5,
         (255, 255, 0),
         2
     )
@@ -257,10 +274,30 @@ while True:
     cv2.putText(
         frame,
         current_question,
-        (20, 440),
+        (20, 420),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.55,
+        0.5,
         (255, 255, 255),
+        2
+    )
+
+    cv2.putText(
+        frame,
+        "Press N : Next Qn",
+        (20,445),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0,255,0),
+        2
+    )
+    
+    cv2.putText(
+        frame,
+        "Press Q : Finish Interview",
+        (20, 475),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 0),
         2
     )
 
@@ -271,37 +308,69 @@ while True:
 
     key = cv2.waitKey(1) & 0xFF
 
-    if key == ord('q'):
+    # Next Question
+    if key == ord('n'):
+
+        if current_question not in asked_questions:
+            asked_questions.append(current_question)
+
+        if current_question_index < len(questions) - 1:
+
+            current_question_index += 1
+
+            question_start_time = time.time()
+
+    # Quit Interview
+    elif key == ord('q'):
+
+        if current_question not in asked_questions:
+            asked_questions.append(current_question)
+
         break
 
 # Release Resources
 cap.release()
 cv2.destroyAllWindows()
 
+audio_file = stop_recording(
+    audio_stream
+)
+
 interview_duration = int(time.time() - start_time)
 
-print("Starting audio recording...")
+if audio_file:
 
-audio_file = record_audio(
-    duration=30
-)
+    text = speech_to_text(
+        audio_file
+    )
 
-text = speech_to_text(
-    audio_file
-)
+    wpm = calculate_wpm(
+        text,
+        interview_duration
+    )
 
-wpm = calculate_wpm(
-    text,
-    interview_duration
-)
+    fillers = count_fillers(
+        text
+    )
 
-fillers = count_fillers(
-    text
-)
+else:
+
+    text = ""
+
+    wpm = 0
+
+    fillers = 0
 
 communication_score = calculate_communication_score(
     wpm,
     fillers
+)
+
+feedback = generate_feedback(
+    eye_score,
+    head_score,
+    posture_score,
+    communication_score
 )
 
 confidence_score = calculate_confidence(
@@ -325,9 +394,11 @@ generate_report(
     head_score,
     posture_score,
     confidence_score,
+    interview_type,
     interview_duration,
     asked_questions,
     wpm,
     fillers,
-    communication_score
+    communication_score,
+    feedback
 )

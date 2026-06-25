@@ -6,11 +6,13 @@ def generate_report(
         head_score,
         posture_score,
         confidence_score,
+        interview_type,
         interview_duration,
         asked_questions,
         wpm,
         fillers,
-        communication_score):
+        communication_score,
+        feedback):
     
 
     if confidence_score >= 85:
@@ -29,11 +31,16 @@ def generate_report(
         f"- {q}" for q in asked_questions
     )
 
+    feedback_test = "\n".join(
+        f"- {item}" for item in feedback
+    )
+
     report = f"""
 ===================================
 INTERVIEW REPORT
 ===================================
 
+Interview Type : {interview_type}
 Interview Duration : {interview_duration} seconds
 Eye Contact Score : {eye_score}%
 Head Stability Score : {head_score}%
@@ -48,6 +55,10 @@ Communication Score : {communication_score}%
 Interview Questions Asked:
 
 {questions_text}
+
+Personalized Feedback:
+
+{feedback_test}
 
 Overall Rating : {rating}
 

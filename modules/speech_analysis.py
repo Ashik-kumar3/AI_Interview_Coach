@@ -1,7 +1,10 @@
 import sounddevice as sd
 from scipy.io.wavfile import write
 from faster_whisper import WhisperModel
-
+import numpy as np
+audio_data = []
+sample_rate = 44100
+recording = False
 
 def record_audio(duration=30,
                  filename="recordings/interview_audio.wav"):
@@ -84,3 +87,58 @@ def count_fillers(text):
         count += text.count(filler)
 
     return count
+
+def audio_callback(indata, frames, time, status):
+
+    if recording:
+        audio_data.append(indata.copy())
+
+
+def start_recording():
+
+    global recording, audio_data
+
+    audio_data = []
+
+    recording = True
+
+    stream = sd.InputStream(
+        samplerate=sample_rate,
+        channels=1,
+        callback=audio_callback
+    )
+
+    stream.start()
+
+    return stream
+
+
+def stop_recording(
+        stream,
+        filename="recordings/interview_audio.wav"
+):
+
+    global recording
+
+    recording = False
+
+    stream.stop()
+    stream.close()
+
+    if len(audio_data) == 0:
+        return None
+
+    audio = np.concatenate(
+        audio_data,
+        axis=0
+    )
+
+    write(
+        filename,
+        sample_rate,
+        audio
+    )
+
+    print("Audio saved:", filename)
+
+    return filename

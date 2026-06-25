@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI Interview Coach
 
 ## Project Overview
@@ -183,3 +184,4 @@ Overall Rating : Average
 * Interview Transcript Export
 * Personalized Feedback Suggestions
 * Advanced Communication Analytics
+=======
